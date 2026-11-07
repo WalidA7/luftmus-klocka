@@ -1,0 +1,49 @@
+# Bygger Luftmus (iPhone-skal + klockapp) på en Mac i molnet, gratis.
+# Resultat: Luftmus.ipa (osignerad) -> installera med Sideloadly från Windows.
+name: Bygg Luftmus
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**/*.md"]
+  workflow_dispatch:
+concurrency:
+  group: build
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode-projekt
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks | grep -iE "watch|iphoneos"
+          brew install xcodegen
+          xcodegen generate
+      - name: Klockappen
+        run: |
+          set -o pipefail
+          xcodebuild -project Luftmus.xcodeproj -target LuftmusWatch -configuration Release -sdk watchos \
+            ONLY_ACTIVE_ARCH=NO SYMROOT="$PWD/build" CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build 2>&1 | tail -80
+      - name: iPhone-skalet
+        run: |
+          set -o pipefail
+          xcodebuild -project Luftmus.xcodeproj -target Luftmus -configuration Release -sdk iphoneos \
+            SYMROOT="$PWD/build" CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build 2>&1 | tail -40
+      - name: Packa ihop Luftmus.ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/Release-iphoneos/Luftmus.app Payload/
+          mkdir -p Payload/Luftmus.app/Watch
+          cp -R build/Release-watchos/LuftmusWatch.app Payload/Luftmus.app/Watch/
+          lipo -info Payload/Luftmus.app/Watch/LuftmusWatch.app/LuftmusWatch || true
+          plutil -p Payload/Luftmus.app/Watch/LuftmusWatch.app/Info.plist
+          zip -qr Luftmus.ipa Payload
+          ls -la Luftmus.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Luftmus-ipa
+          path: Luftmus.ipa
