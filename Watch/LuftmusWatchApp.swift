@@ -408,6 +408,12 @@ struct RunView: View {
             s.crown(newValue - lastCrown)
             lastCrown = newValue
         }
+        // AssistiveTouch markerar behållaren (den har fokus för kronan). Lär den
+        // att "Tryck" på den = KLICK, så nyp/knyt klickar på datorn.
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Klick")
+        .accessibilityAction { s.send(["t": "tap", "a": "click"]) }
         .sheet(isPresented: $meny) {
             VStack(spacing: 8) {
                 Button("Högerklick") { meny = false; s.send(["t": "tap", "a": "rclick"]) }
