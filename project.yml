@@ -8,7 +8,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "1.0"
+    MARKETING_VERSION: "3.0"
     CURRENT_PROJECT_VERSION: "1"
 targets:
   Luftmus:
@@ -44,6 +44,7 @@ targets:
         WKBackgroundModes: [physical-therapy]
         NSMotionUsageDescription: Luftmus läser handledens rörelser för att styra musen på datorn.
         NSLocalNetworkUsageDescription: Luftmus skickar rörelserna till din dator på samma Wi-Fi.
+        NSBluetoothAlwaysUsageDescription: Luftmus kopplar direkt till din dator via Bluetooth för att styra musen.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
           NSAllowsLocalNetworking: true
