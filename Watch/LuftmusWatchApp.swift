@@ -368,38 +368,46 @@ struct SetupView: View {
     }
 }
 
+// Körskärmen: sida 1 = EN enda stor KLICK-yta (så Apples AssistiveTouch-nyp
+// alltid trycker rätt), sida 2 (svep åt vänster) = Höger, Kalib., Stopp.
 struct RunView: View {
     @EnvironmentObject var s: Streamer
     @State private var crown = 0.0
     @State private var lastCrown = 0.0
     var body: some View {
-        VStack(spacing: 6) {
-            Text(s.status)
-                .font(.footnote)
-                .multilineTextAlignment(.center)
-                .lineLimit(3)
-                .minimumScaleFactor(0.7)
-            Text(s.link.isEmpty ? "…" : (s.link == "Bluetooth" ? "🔵 Bluetooth" : "📶 Wi-Fi (reserv)"))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+        TabView {
             Button { s.send(["t": "tap", "a": "click"]) } label: {
-                Text("KLICK").font(.title3).bold().frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 4) {
+                    Text(s.status)
+                        .font(.footnote)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.7)
+                    Text(s.link.isEmpty ? "…" : (s.link == "Bluetooth" ? "🔵" : "📶 Wi-Fi"))
+                        .font(.caption2)
+                    Text("KLICK").font(.title2).bold()
+                    Text("nyp = klick · svep ← mer")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .tint(.indigo)
-            HStack(spacing: 6) {
-                Button("Höger") { s.send(["t": "tap", "a": "rclick"]) }
-                Button("Kalib.") { s.send(["t": "kal"]) }
+            .focusable(true)
+            .digitalCrownRotation($crown, from: -1_000_000, through: 1_000_000, by: 0.1,
+                                  sensitivity: .medium, isContinuous: true, isHapticFeedbackEnabled: false)
+            .onChange(of: crown) { newValue in
+                s.crown(newValue - lastCrown)
+                lastCrown = newValue
+            }
+
+            VStack(spacing: 8) {
+                Button("Högerklick") { s.send(["t": "tap", "a": "rclick"]) }
+                Button("Kalibrera") { s.send(["t": "kal"]) }
                 Button("Stopp") { s.stop() }.tint(.red)
             }
-            .font(.caption2)
         }
-        .focusable(true)
-        .digitalCrownRotation($crown, from: -1_000_000, through: 1_000_000, by: 0.1,
-                              sensitivity: .medium, isContinuous: true, isHapticFeedbackEnabled: false)
-        .onChange(of: crown) { newValue in
-            s.crown(newValue - lastCrown)
-            lastCrown = newValue
-        }
+        .tabViewStyle(.page)
     }
 }
