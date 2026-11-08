@@ -368,14 +368,16 @@ struct SetupView: View {
     }
 }
 
-// Körskärmen: sida 1 = EN enda stor KLICK-yta (så Apples AssistiveTouch-nyp
-// alltid trycker rätt), sida 2 (svep åt vänster) = Höger, Kalib., Stopp.
+// Körskärmen: EN enda helskärmsknapp (KLICK), så Apples AssistiveTouch-nyp/knyt
+// alltid trycker på den. Håll inne fingret ~1 s = meny (Högerklick, Kalibrera, Stopp).
+// Kronan (scroll) sitter på behållaren, precis som i 3.0 där knyt fungerade.
 struct RunView: View {
     @EnvironmentObject var s: Streamer
     @State private var crown = 0.0
     @State private var lastCrown = 0.0
+    @State private var meny = false
     var body: some View {
-        TabView {
+        VStack(spacing: 0) {
             Button { s.send(["t": "tap", "a": "click"]) } label: {
                 VStack(spacing: 4) {
                     Text(s.status)
@@ -386,7 +388,7 @@ struct RunView: View {
                     Text(s.link.isEmpty ? "…" : (s.link == "Bluetooth" ? "🔵" : "📶 Wi-Fi"))
                         .font(.caption2)
                     Text("KLICK").font(.title2).bold()
-                    Text("nyp = klick · svep ← mer")
+                    Text("håll inne = meny")
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                 }
@@ -394,20 +396,24 @@ struct RunView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(.indigo)
-            .focusable(true)
-            .digitalCrownRotation($crown, from: -1_000_000, through: 1_000_000, by: 0.1,
-                                  sensitivity: .medium, isContinuous: true, isHapticFeedbackEnabled: false)
-            .onChange(of: crown) { newValue in
-                s.crown(newValue - lastCrown)
-                lastCrown = newValue
-            }
-
+            .simultaneousGesture(LongPressGesture(minimumDuration: 0.8).onEnded { _ in
+                WKInterfaceDevice.current().play(.click)
+                meny = true
+            })
+        }
+        .focusable(true)
+        .digitalCrownRotation($crown, from: -1_000_000, through: 1_000_000, by: 0.1,
+                              sensitivity: .medium, isContinuous: true, isHapticFeedbackEnabled: false)
+        .onChange(of: crown) { newValue in
+            s.crown(newValue - lastCrown)
+            lastCrown = newValue
+        }
+        .sheet(isPresented: $meny) {
             VStack(spacing: 8) {
-                Button("Högerklick") { s.send(["t": "tap", "a": "rclick"]) }
-                Button("Kalibrera") { s.send(["t": "kal"]) }
-                Button("Stopp") { s.stop() }.tint(.red)
+                Button("Högerklick") { meny = false; s.send(["t": "tap", "a": "rclick"]) }
+                Button("Kalibrera") { meny = false; s.send(["t": "kal"]) }
+                Button("Stopp") { meny = false; s.stop() }.tint(.red)
             }
         }
-        .tabViewStyle(.page)
     }
 }
